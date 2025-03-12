@@ -53,17 +53,20 @@ print("✅ โมเดลและ Scaler ถูกบันทึกใหม�
 
 # ส่วนหัวของเว็บแอป
 st.title("🔍 Diabetes Prediction App")
-st.write("อัปโหลดข้อมูลเพื่อทำนายโอกาสเป็นเบาหวาน")
+st.write("กรอกข้อมูลเพื่อทำนายโอกาสเป็นเบาหวาน หรือ กดปุ่ม **สุ่มค่า** ")
 
 def predict_diabetes(data):
     data_scaled = scaler.transform(data)
     prediction = model.predict(data_scaled)
     return ["เป็นเบาหวาน" if pred == 1 else "ไม่เป็นเบาหวาน" for pred in prediction]
 
-st.write("หรือใส่ข้อมูลเองเพื่อทำนาย")
-input_data = []
+
 columns = ['Age', 'Pregnancies', 'BMI', 'Glucose', 'BloodPressure', 'HbA1c', 'LDL', 'HDL', 'Triglycerides',
            'WaistCircumference', 'HipCircumference', 'WHR', 'FamilyHistory', 'DietType', 'Hypertension', 'MedicationUse']
+
+# การเก็บข้อมูลใน session_state เพื่อไม่ให้รีเซ็ต
+if 'input_data' not in st.session_state:
+    st.session_state.input_data = {col: None for col in columns}  # กำหนดค่าเริ่มต้น
 
 def generate_default_value(col):
     default_values = {
@@ -86,14 +89,32 @@ def generate_default_value(col):
     }
     return default_values.get(col, 0)
 
-for col in columns:
-    value = st.number_input(f"{col}", value=generate_default_value(col))
-    input_data.append(value)
+# ปุ่มในรูปแบบแนวนอน
+col1, col2, col3 = st.columns(3)
 
-if st.button("🔮 ทำนายผลแบบเดี่ยว"):
-    input_df = pd.DataFrame([input_data], columns=columns)
-    prediction = predict_diabetes(input_df)[0]
-    st.write(f"🔍 ผลลัพธ์: **{prediction}**")
+with col1:
+    if st.button("🔮 สุ่มค่า"):
+        for col in columns:
+            st.session_state.input_data[col] = generate_default_value(col)
+
+with col2:
+    if st.button("🔄 รีเซ็ตข้อมูล"):
+        # รีเซ็ตข้อมูลใน session_state
+        st.session_state.input_data = {col: None for col in columns}
+
+with col3:
+    if st.button("🔮 ทำนายผล"):
+        if None in st.session_state.input_data.values():
+            st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
+        else:
+            input_df = pd.DataFrame([list(st.session_state.input_data.values())], columns=columns)
+            prediction = predict_diabetes(input_df)[0]
+            st.success(f"ผลลัพธ์: **{prediction}**")
+
+# ถ้า User กรอกข้อมูลเอง
+for col in columns:
+    st.session_state.input_data[col] = st.number_input(f"{col}", value=st.session_state.input_data[col])
+
 
 
 # ข้อมูลติดต่อ
